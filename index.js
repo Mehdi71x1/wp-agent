@@ -1,5 +1,4 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Initialize Gemini API
@@ -14,27 +13,37 @@ const client = new Client({
     }
 });
 
-client.on('qr', (qr) => {
-    console.log('QR RECEIVED', qr);
-    qrcode.generate(qr, { small: true });
-    console.log('Please scan the QR code above to log in.');
+// Using pairing code instead of QR
+client.on('qr', async (qr) => {
+    console.log('QR Code received, but we will use Pairing Code instead.');
+    try {
+        const pairingCode = await client.requestPairingCode('8801627280992');
+        console.log('-------------------------------------------');
+        console.log('YOUR WHATSAPP PAIRING CODE IS:');
+        console.log(pairingCode);
+        console.log('-------------------------------------------');
+        console.log('Please enter this code on your WhatsApp (+8801627280992).');
+    } catch (err) {
+        console.error('Error requesting pairing code:', err);
+    }
 });
 
-// If the user wants a pairing code instead of QR
 client.on('ready', () => {
-    console.log('Client is ready!');
+    console.log('WhatsApp Agent is ready and connected!');
 });
 
 client.on('message', async (msg) => {
     if (msg.fromMe) return;
 
     try {
+        console.log(`Received message from ${msg.from}: ${msg.body}`);
         const prompt = msg.body;
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
         
-        msg.reply(text);
+        await msg.reply(text);
+        console.log(`Replied with: ${text}`);
     } catch (error) {
         console.error('Error with Gemini API:', error);
     }
